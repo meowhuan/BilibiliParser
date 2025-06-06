@@ -239,10 +239,40 @@ class BilibiliParser(BasePlugin):
                             return
 
     async def handle_message(self, msg):
-        """处理包含B站链接的消息"""
+        """处理包含B站链接的消息或卡片"""
         text = msg.raw_message
 
-        # 判断是否包含B站视频链接、BV号或AV号或短链
+        # 检查是否为CQ:json卡片消息
+        cq_json_match = re.match(r"\[CQ:json,data=(.+)\]", text)
+        if cq_json_match:
+            try:
+                # CQ码中的data字段做了转义，先还原
+                json_str = cq_json_match.group(1)
+                # 还原特殊字符
+                json_str = (
+                    json_str.replace('&#44;', ',')
+                            .replace('&quot;', '"')
+                            .replace('&amp;', '&')
+                )
+                card_data = json.loads(json_str)
+                # 提取meta.detail_1.qqdocurl或url字段
+                meta = card_data.get("meta", {})
+                detail = meta.get("detail_1", {})
+                url = detail.get("qqdocurl", "") or detail.get("url", "")
+                # 查找b23.tv短链
+                b23_match = re.search(r"(b23\.tv/[a-zA-Z0-9]+)", url)
+                if b23_match:
+                    await msg.reply(text=PARSE_HINT_TEXT)
+                    video_id = await self.resolve_short_url("https://" + b23_match.group(1))
+                    if video_id:
+                        await self.process_bilibili_video(msg, video_id)
+                        await self.try_send_video_file(msg, video_id)
+                    return
+            except Exception as e:
+                _log.error(f"解析CQ:json卡片失败: {e}")
+                # 不处理，继续后续逻辑
+
+        # 检查文本中的BV号、AV号、短链
         bvid_match = re.search(r"BV([a-zA-Z0-9]{10})", text)
         aid_match = re.search(r"av(\d+)", text)
         short_match = re.search(r"(b23\.tv/[a-zA-Z0-9]+)", text)
