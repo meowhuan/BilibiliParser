@@ -397,7 +397,7 @@ class BilibiliParser(BasePlugin):
             tmp_dir = "./tmp"
             if not os.path.exists(tmp_dir):
                 os.makedirs(tmp_dir, exist_ok=True)
-            video_path = os.path.join(tmp_dir, f"bili_{bvid or aid}_{cid}.mp4")
+            video_path = os.path.abspath(os.path.join(tmp_dir, f"bili_{bvid or aid}_{cid}.mp4"))
             async with aiohttp.ClientSession() as session:
                 async with session.get(video_url, headers=headers) as resp:
                     with open(video_path, "wb") as f:
@@ -416,6 +416,7 @@ class BilibiliParser(BasePlugin):
             else:
                 group_id = getattr(msg, "group_id", None)
                 if group_id:
+                    # 发送绝对路径，避免“识别URL失败”问题
                     await api.post_group_file(group_id=group_id, video=video_path)
         except Exception as e:
             _log.error(f"下载或发送B站视频失败: {str(e)}")
