@@ -273,9 +273,10 @@ class BilibiliParser(BasePlugin):
                 # 不处理，继续后续逻辑
 
         # 检查文本中的BV号、AV号、短链
-        bvid_match = re.search(r"BV([a-zA-Z0-9]{10})", text)
-        aid_match = re.search(r"av(\d+)", text)
-        short_match = re.search(r"(b23\.tv/[a-zA-Z0-9]+)", text)
+        text_no_cq = re.sub(r"\[CQ:[^\]]+\]", "", text)
+        bvid_match = re.search(r"BV([a-zA-Z0-9]{10})", text_no_cq)
+        aid_match = re.search(r"av(\d+)", text_no_cq)
+        short_match = re.search(r"(b23\.tv/[a-zA-Z0-9]+)", text_no_cq)
         video_id = None
 
         if bvid_match:
